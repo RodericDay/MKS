@@ -1,6 +1,7 @@
-from MKS import define, UnitError
 import pytest
+pytest.main(__file__)
 
+from MKS import define, Measurement, UnitError
 define(globals())
 
 def test_simplest():
@@ -43,7 +44,7 @@ def test_defined():
     assert V*I == J/s
 
 def test_dimensionless():
-    assert kg/kg + 1 == 2
+    assert str( 1 * kg / kg ) == '1'
 
 def test_constants():
     T = 1 * K
@@ -74,5 +75,5 @@ def test_fracpower():
 def test_prettyderived():
     assert str( 1 * C ) == '1 C'
 
-if __name__ == '__main__':
-    pytest.main(__file__)
+def test_compare():
+    assert 2 * m > 1 * m

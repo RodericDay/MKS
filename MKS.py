@@ -20,6 +20,7 @@ DERIVED = {
 CONSTANTS = {
     'R' : (8.3144621, 'MLL/NTTO'),
     'F' : (9.64853399E4, 'IT/N'),
+    'Da': (1.660538921E-27, 'M')
 }
 
 class UnitError(Exception):
@@ -129,37 +130,25 @@ class Measurement(object):
             self.quantity = quantity
             self.dimensions = Dimensions(str(dimensions))
 
-    def __eq__(self, other):
+    def __or__(self, other):
+        '''
+        ensure that the dimensions match whatever is proposed, and return
+        the scalar value. both the proper way to "exit" the unit process
+        and a way to just test units at any point in code
+        '''
         other = Measurement(other)
         if self.dimensions != other.dimensions:
             raise UnitError(self.dimensions, other.dimensions)
-        return self.quantity==other.quantity
+        return self.quantity
 
-    def __add__(self, other):
-        other = Measurement(other)
-        if self.dimensions != other.dimensions:
-            raise UnitError(self.dimensions, other.dimensions)
-        q = self.quantity + other.quantity
-        d = self.dimensions
-        return Measurement(q,d)
-
-    def __neg__(self):
-        return self*-1
-
-    def __sub__(self, other):
-        return self + -other
-
-    def __mul__(self, other):
-        other = Measurement(other)
-        q = self.quantity * other.quantity
-        d = self.dimensions + other.dimensions
-        return Measurement(q, d)
-
-    def __div__(self, other):
-        return self * other**-1
-
-    def __truediv__(self, other):
-        return self.__div__(other)
+    __add__ = lambda x, o: Measurement((x|o) + (o|o), x.dimensions)
+    __neg__ = lambda x: x * -1
+    __sub__ = lambda x, o: x + -o
+    __eq__  = lambda x, o: x|x == o
+    __lt__  = lambda x, o: x|x <  o|o
+    __le__  = lambda x, o: x|x <= o|o
+    __gt__  = lambda x, o: x|x >  o|o
+    __ge__  = lambda x, o: x|x >= o|o
 
     def __rmul__(self, other):
         '''
@@ -167,6 +156,21 @@ class Measurement(object):
         dimensionless to begin with
         '''
         return Measurement(self.quantity * other, self.dimensions)
+
+    def __mul__(self, other):
+        try:
+            q = self.quantity * other.quantity
+            d = self.dimensions + other.dimensions
+        except AttributeError:
+            q = self.quantity * other
+            d = self.dimensions
+        return Measurement(q, d)
+
+    def __div__(self, other):
+        return self.__truediv__(other)
+
+    def __truediv__(self, other):
+        return self * other**-1
 
     def __pow__(self, power):
         q = 1 if self.quantity==1 else self.quantity**power
@@ -180,17 +184,6 @@ class Measurement(object):
 
     def __str__(self):
         return "{} {}".format(self.quantity, self.dimensions.pretty).strip()
-
-    def __or__(self, other):
-        '''
-        ensure that the dimensions match whatever is proposed, and return
-        the scalar value. supposed to be the proper way to "exit" the unit
-        process.
-        '''
-        other = Measurement(other)
-        if self.dimensions != other.dimensions:
-            raise UnitError(self.dimensions, other.dimensions)
-        return self.quantity
 
 
 def define(namespace):
@@ -208,6 +201,6 @@ def define(namespace):
 
 
 if __name__ == '__main__':
-    import doctest, pytest
+    import pytest, doctest
     doctest.testmod()
-    pytest.main('tests.py')
+    pytest.main(['tests.py'])
