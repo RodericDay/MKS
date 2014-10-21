@@ -135,7 +135,7 @@ class Measurement(object):
     __array_priority__ = True
 
     def __new__(cls, qty, dims):
-        if dims=='1':
+        if str(dims)=='1':
             return qty
         inst = object.__new__(cls, qty, dims)
         return inst
@@ -159,6 +159,7 @@ class Measurement(object):
         except AssertionError:
             raise UnitError(self.dimensions, other.dimensions)
         except AttributeError:
+            # handle case where comparison is vs. dimensionless qty
             if str(self.dimensions) != '1':
                 raise UnitError(self.dimensions, '1')
         return self.quantity
@@ -168,7 +169,7 @@ class Measurement(object):
     __neg__ = lambda x: x * -1
     __add__ = lambda x, o: Measurement((x|o) + (o|o), x.dimensions)
     __sub__ = lambda x, o: x + -o
-    __eq__  = lambda x, o: x|x == o
+    __eq__  = lambda x, o: x|o == o|o
     __lt__  = lambda x, o: x|o <  o|o
     __le__  = lambda x, o: x|o <= o|o
     __gt__  = lambda x, o: x|o >  o|o

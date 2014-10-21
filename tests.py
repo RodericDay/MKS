@@ -78,3 +78,16 @@ def test_prettyderived():
 
 def test_compare():
     assert 2 * m > 1 * m
+
+def test_compare_bad():
+    with pytest.raises(UnitError):
+        2 * m == 2 * kg
+    with pytest.raises(UnitError):
+        2 * m > 1 * kg
+
+def test_compare_float():
+    assert 3.45 * m == 3.45 * m
+
+def test_quit_dless():
+    d = m / m
+    assert type( d ) != type( m )
