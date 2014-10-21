@@ -1,3 +1,4 @@
+# encoding: utf-8
 import pytest
 pytest.main(__file__)
 
@@ -8,7 +9,7 @@ def test_simplest():
     assert str( 3 * kg ) == '3 kg'
 
 def test_correspondence():
-    assert str( (2*m) * (2*m) ) == '4 m^2'
+    assert str( (2*m) * (2*m) ) == '4 m²'
 
 def test_leading():
     assert str( 1 * 2*s * 3 ) == '6 s'
@@ -17,16 +18,16 @@ def test_repr():
     assert repr( 5 * kg * kg * s * s ) == 'Measurement(5, MMTT)'
 
 def test_collect():
-    assert str( 2 * s * s * kg ) == '2 kg.s^2'
+    assert str( 2 * s * s * kg ) == '2 kg.s²'
 
 def test_pow():
-    assert str( s**-1 ) == '1 s^-1'
+    assert str( s**-1 ) == '1 s⁻¹'
 
 def test_cancelout():
     assert str( 6 * m * m**-1 ) == '6'
 
 def test_mulpow():
-    assert str( 6 * m * s**-1 ) == '6 m.s^-1'
+    assert str( 6 * m * s**-1 ) == '6 m.s⁻¹'
 
 def test_add():
     assert 6*m + 6*m == 12*m
@@ -56,7 +57,7 @@ def test_somefloats():
     assert 0.500000 * m + 1./5 * m == 0.7000 * m
 
 def test_sort_order():
-    assert str( kg * A**2 / cd / m**2 ) == '1 kg.A^2.cd^-1.m^-2'
+    assert str( kg * A**2 / cd / m**2 ) == '1 kg.A².cd⁻¹.m⁻²'
 
 def test_subtract():
     assert str( kg - kg ) == '0 kg'

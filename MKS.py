@@ -1,3 +1,4 @@
+# encoding: utf-8
 from __future__ import division
 
 BASE = {
@@ -22,6 +23,17 @@ CONSTANTS = {
     'F' : (9.64853399E4, 'IT/N'),
     'Da': (1.660538921E-27, 'M')
 }
+
+reg =  '0123456789-'
+sup = u'⁰¹²³⁴⁵⁶⁷⁸⁹⁻'
+SUP = {r: s.encode('utf-8') for r, s in zip(reg, sup)}
+
+def superscript(integer):
+    '''
+    >>> superscript(-10)
+    '\\xe2\\x81\\xbb\\xc2\\xb9\\xe2\\x81\\xb0'
+    '''
+    return ''.join([SUP[c] for c in str(integer)])
 
 class UnitError(Exception):
     msg = "LHS had units <{}>, RHS had units <{}>."
@@ -110,9 +122,9 @@ class Dimensions(dict):
                 if exp == 1:
                     positive.append("{}".format(sym))
                 else:
-                    positive.append("{}^{}".format(sym, exp))
+                    positive.append("{}{}".format(sym, superscript(exp)))
             elif self[k] < 0:
-                negative.append("{}^{}".format(sym, exp))
+                negative.append("{}{}".format(sym, superscript(exp)))
         return '.'.join(positive+negative[::-1])
 
 
@@ -197,6 +209,13 @@ class Measurement(object):
 
     def __str__(self):
         return "{} {}".format(self.quantity, self.dimensions.pretty).strip()
+
+    @property
+    def label(self):
+        '''
+        shorthand for matplotlib usage
+        '''
+        return self.dimensions.pretty.decode('utf-8')
 
 
 def define(namespace):
