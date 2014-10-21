@@ -122,6 +122,12 @@ class Measurement(object):
     '''
     __array_priority__ = True
 
+    def __new__(cls, qty, dims):
+        if dims=='1':
+            return qty
+        inst = object.__new__(cls, qty, dims)
+        return inst
+
     def __init__(self, quantity, dimensions=''):
         if isinstance(quantity, type(self)):
             self.quantity = quantity.quantity
@@ -136,19 +142,26 @@ class Measurement(object):
         the scalar value. both the proper way to "exit" the unit process
         and a way to just test units at any point in code
         '''
-        other = Measurement(other)
-        if self.dimensions != other.dimensions:
+        try:
+            assert self.dimensions == other.dimensions
+        except AssertionError:
             raise UnitError(self.dimensions, other.dimensions)
+        except AttributeError:
+            if str(self.dimensions) != '1':
+                raise UnitError(self.dimensions, '1')
         return self.quantity
 
-    __add__ = lambda x, o: Measurement((x|o) + (o|o), x.dimensions)
+    __len__ = lambda x: len(x.quantity)
+    __abs__ = lambda x: Measurement(abs(x.quantity), x.dimensions)
     __neg__ = lambda x: x * -1
+    __add__ = lambda x, o: Measurement((x|o) + (o|o), x.dimensions)
     __sub__ = lambda x, o: x + -o
     __eq__  = lambda x, o: x|x == o
-    __lt__  = lambda x, o: x|x <  o|o
-    __le__  = lambda x, o: x|x <= o|o
-    __gt__  = lambda x, o: x|x >  o|o
-    __ge__  = lambda x, o: x|x >= o|o
+    __lt__  = lambda x, o: x|o <  o|o
+    __le__  = lambda x, o: x|o <= o|o
+    __gt__  = lambda x, o: x|o >  o|o
+    __ge__  = lambda x, o: x|o >= o|o
+    __rdiv__= lambda x, o: o * x**-1
 
     def __rmul__(self, other):
         '''
