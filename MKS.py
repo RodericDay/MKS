@@ -2,21 +2,23 @@
 from __future__ import division
 
 BASE = {
+    'I':'A',
+    'J':'cd',
     'L':'m',
     'M':'kg', 
-    'T':'s',
-    'I':'A',
-    'O':'K',
     'N':'mol',
-    'J':'cd',
+    'O':'K',
+    'T':'s',
 }
 DERIVED = {
-    'LLM/ITTT': 'V',
-    'LLM/TTT' : 'W',
-    'LLM/TT'  : 'J',
-    'LM/TT'   : 'N',
-    'M/LTT'   : 'Pa',
-    'IT'      : 'C',
+    'IITTT/LLM' : 'S',
+    'LLM/IITTT' : 'ohm',
+    'LLM/ITTT'  : 'V',
+    'LLM/TTT'   : 'W',
+    'LLM/TT'    : 'J',
+    'LM/TT'     : 'N',
+    'M/LTT'     : 'Pa',
+    'IT'        : 'C',
 }
 CONSTANTS = {
     'R' : (8.3144621, 'MLL/NTTO'),
@@ -148,32 +150,33 @@ class Measurement(object):
             self.quantity = quantity
             self.dimensions = Dimensions(str(dimensions))
 
-    def __or__(self, other):
+    def __call__(self, other):
         '''
         ensure that the dimensions match whatever is proposed, and return
         the scalar value. both the proper way to "exit" the unit process
         and a way to just test units at any point in code
         '''
+
         try:
-            assert self.dimensions == other.dimensions
+            out = self / other
+            assert not isinstance(out, Measurement)
+            return out
         except AssertionError:
-            raise UnitError(self.dimensions, other.dimensions)
-        except AttributeError:
-            # handle case where comparison is vs. dimensionless qty
-            if str(self.dimensions) != '1':
+            try:
+                raise UnitError(self.dimensions, other.dimensions)
+            except AttributeError:
                 raise UnitError(self.dimensions, '1')
-        return self.quantity
 
     __len__ = lambda x: len(x.quantity)
     __abs__ = lambda x: Measurement(abs(x.quantity), x.dimensions)
     __neg__ = lambda x: x * -1
-    __add__ = lambda x, o: Measurement((x|o) + (o|o), x.dimensions)
+    __add__ = lambda x, o: ( x(o) + o(o) ) * o
     __sub__ = lambda x, o: x + -o
-    __eq__  = lambda x, o: x|o == o|o
-    __lt__  = lambda x, o: x|o <  o|o
-    __le__  = lambda x, o: x|o <= o|o
-    __gt__  = lambda x, o: x|o >  o|o
-    __ge__  = lambda x, o: x|o >= o|o
+    __eq__  = lambda x, o: x(o) == o(o)
+    __lt__  = lambda x, o: x(o) <  o(o)
+    __le__  = lambda x, o: x(o) <= o(o)
+    __gt__  = lambda x, o: x(o) >  o(o)
+    __ge__  = lambda x, o: x(o) >= o(o)
     __rdiv__= lambda x, o: o * x**-1
 
     def __rmul__(self, other):
@@ -199,7 +202,7 @@ class Measurement(object):
         return self * other**-1
 
     def __pow__(self, power):
-        q = 1 if self.quantity==1 else self.quantity**power
+        q = 1 if self.quantity is 1 else self.quantity**power
         d = self.dimensions*power
         return Measurement(q, d)
 
@@ -211,12 +214,23 @@ class Measurement(object):
     def __str__(self):
         return "{} {}".format(self.quantity, self.dimensions.pretty).strip()
 
+    def __iter__(self):
+        for v in self.quantity:
+            yield v * self.units
+
+    def sum(self):
+        return Measurement(self.quantity.sum(), self.dimensions)
+
     @property
     def label(self):
         '''
         shorthand for matplotlib usage
         '''
         return self.dimensions.pretty.decode('utf-8')
+
+    @property
+    def units(self):
+        return Measurement(1, self.dimensions)
 
 
 def define(namespace):

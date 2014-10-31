@@ -54,19 +54,21 @@ def test_constants():
     2*a*F/(R*T)*h + 1
 
 def test_somefloats():
-    assert 0.500000 * m + 1./5 * m == 0.7000 * m
+    sub = 0.500000 * m + 1./5 * m - 0.7000 * m
+    assert sub(m) == 0
 
 def test_sort_order():
     assert str( kg * A**2 / cd / m**2 ) == '1 kg.A².cd⁻¹.m⁻²'
 
 def test_subtract():
-    assert str( kg - kg ) == '0 kg'
+    assert str( kg - kg ) == '-0.0 kg'
 
 def test_guarantee():
     r = 1 * m
+    A = r**2
     with pytest.raises(UnitError):
-        r**2 | m
-    assert r**2 | m**2 == 1
+        A(m)
+    assert A(m**2) == 1
 
 def test_fracpower():
     l = h = 3 * m
@@ -91,3 +93,8 @@ def test_compare_float():
 def test_quit_dless():
     d = m / m
     assert type( d ) != type( m )
+
+def test_unitconv():
+    um = 1E-6 * m
+    r = 1.32E-5 * m
+    assert str( r(um) ) == str( 13.2 )
