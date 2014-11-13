@@ -170,14 +170,15 @@ class Measurement(object):
     __len__ = lambda x: len(x.quantity)
     __abs__ = lambda x: Measurement(abs(x.quantity), x.dimensions)
     __neg__ = lambda x: x * -1
-    __add__ = lambda x, o: ( x(o) + o(o) ) * o
+    __add__ = lambda x, o: ( x(o.units) + o(o.units) ) * o.units
     __sub__ = lambda x, o: x + -o
-    __eq__  = lambda x, o: x(o) == o(o)
-    __lt__  = lambda x, o: x(o) <  o(o)
-    __le__  = lambda x, o: x(o) <= o(o)
-    __gt__  = lambda x, o: x(o) >  o(o)
-    __ge__  = lambda x, o: x(o) >= o(o)
+    __eq__  = lambda x, o: x(o.units) == o(o.units)
+    __lt__  = lambda x, o: x(o.units) <  o(o.units)
+    __le__  = lambda x, o: x(o.units) <= o(o.units)
+    __gt__  = lambda x, o: x(o.units) >  o(o.units)
+    __ge__  = lambda x, o: x(o.units) >= o(o.units)
     __rdiv__= lambda x, o: o * x**-1
+    __iter__= lambda x: (v * x.units for v in x.quantity)
 
     def __rmul__(self, other):
         '''
@@ -213,10 +214,6 @@ class Measurement(object):
 
     def __str__(self):
         return "{} {}".format(self.quantity, self.dimensions.pretty).strip()
-
-    def __iter__(self):
-        for v in self.quantity:
-            yield v * self.units
 
     def sum(self):
         return Measurement(self.quantity.sum(), self.dimensions)

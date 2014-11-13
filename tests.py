@@ -61,7 +61,7 @@ def test_sort_order():
     assert str( kg * A**2 / cd / m**2 ) == '1 kg.A².cd⁻¹.m⁻²'
 
 def test_subtract():
-    assert str( kg - kg ) == '-0.0 kg'
+    assert str( kg - kg ) == '0 kg'
 
 def test_guarantee():
     r = 1 * m
