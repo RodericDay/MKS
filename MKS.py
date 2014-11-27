@@ -24,6 +24,7 @@ CONSTANTS = {
     'R' : (8.3144621, 'MLL/NTTO'),
     'F' : (9.64853399E4, 'IT/N'),
     'Da': (1.660538921E-27, 'M'),
+    'atm': (101325, 'M/LTT'),
     'cm': (1E-2, 'L'),
     'mm': (1E-3, 'L'),
     'um': (1E-6, 'L'),
@@ -220,9 +221,6 @@ class Measurement(object):
     def __str__(self):
         return "{} {}".format(self.quantity, self.dimensions.pretty).strip()
 
-    def sum(self):
-        return Measurement(self.quantity.sum(), self.dimensions)
-
     @property
     def label(self):
         '''
@@ -233,6 +231,11 @@ class Measurement(object):
     @property
     def units(self):
         return Measurement(1, self.dimensions)
+
+    def __getattr__(self, thing):
+        if thing in ['sum','mean','min','max']:
+            return lambda *a,**kw: getattr(self.quantity, thing)(*a,**kw) * self.units
+        return getattr(super(Measurement, self), thing)
 
 
 def define(namespace):
