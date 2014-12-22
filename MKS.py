@@ -1,6 +1,38 @@
 # encoding: utf-8
 from __future__ import division
 
+__all__ = [] # injected into namespaces by definition method call
+__doc__ = '''An experiment in Python: units that get out of the way
+
+Essentially consists of a flexible wrapper around any object that keeps a
+tally of units based on the operations performed on them.
+
+To register the units into your current namespace,
+
+>>> import MKS
+>>> namespace = {} # ie. globals()
+>>> MKS.define(namespace)
+
+This makes the expected unit objects available without needing individual
+initialization.
+
+>>> length = 3 * m
+>>> print( length )
+3 m
+
+Units can easily be cast to desired units, but this is up to the user.
+MKS makes no effort to optimize prefixes.
+
+>>> km = 1000 * m
+>>> length(km)
+0.003
+
+Go wild!
+
+Copyright (c) 2014, Roderic Day.
+License: MIT (see LICENSE for details)
+'''
+
 BASE = {
     'I':'A',
     'J':'cd',
@@ -21,15 +53,15 @@ DERIVED = {
     'IT'        : 'C',
 }
 CONSTANTS = {
-    'R' : (8.3144621, 'MLL/NTTO'),
-    'F' : (9.64853399E4, 'IT/N'),
-    'Da': (1.660538921E-27, 'M'),
     'atm': (101325, 'M/LTT'),
-    'cm': (1E-2, 'L'),
-    'mm': (1E-3, 'L'),
-    'um': (1E-6, 'L'),
-    'nm': (1E-9, 'L'),
-    'mA': (1E-3, 'I'),
+    'R'  : (8.3144621, 'MLL/NTTO'),
+    'F'  : (9.64853399E4, 'IT/N'),
+    'Da' : (1.660538921E-27, 'M'),
+    'cm' : (1E-2, 'L'),
+    'mm' : (1E-3, 'L'),
+    'um' : (1E-6, 'L'),
+    'nm' : (1E-9, 'L'),
+    'mA' : (1E-3, 'I'),
 }
 
 reg =  '0123456789-'
@@ -56,8 +88,6 @@ class Dimensions(dict):
     '''
     A tally based on the SI system of units
     http://en.wikipedia.org/wiki/International_System_of_Units
-
-    Perhaps a use-case for a metaclass
     '''
     def __init__(self, string=''):
         self.update({k:0 for k in BASE.keys()})
@@ -117,8 +147,10 @@ class Dimensions(dict):
     def pretty(self):
         '''
         prints out things in human-legible form
-        all positives first, all negatives follow
-        tiebreak alphabetically
+        order is positive ascending, negative descending
+
+        >>> print( (A**2 / cd) * (kg / m**2) )
+        1 kg.A².cd⁻¹.m⁻²
         '''
         if str(self) in DERIVED:
             return DERIVED[str(self)]
@@ -137,8 +169,39 @@ class Dimensions(dict):
 
 
 class Measurement(object):
-    '''
-    Essentially a quantity/dimensions tuple, with all the magic that entails
+    ''' A quantity/dimensions tuple, handling all tallying automatically
+    behind the scenes.
+
+    >>> length = 3 * m
+    >>> print( length**2 )
+    9 m²
+    >>> print( 2 * length )
+    6 m
+    >>> print( 6 * m * s**-1 )
+    6 m.s⁻¹
+    >>> 3*m - 2*m == 1*m
+    True
+    >>> 6*m + 6*m == 12*m
+    True
+    >>> 2 * m < 1 * m
+    False
+
+    The object silently reverts back to a standard python object if units
+    are cancelled out, which makes it simple to use exponentials and trig
+    functions,
+
+    >>> from math import exp
+    >>> n = 1.2 * V
+    >>> T = 300 * K
+    >>> exp( F / (R * T) * n )
+    1.442499337827071e+20
+
+    Float division is assumed,
+
+    >>> a, b = 2*m*s, 4*m
+    >>> print( a / b )
+    0.5 s
+
     '''
     __array_priority__ = True
 
@@ -162,7 +225,6 @@ class Measurement(object):
         the scalar value. both the proper way to "exit" the unit process
         and a way to just test units at any point in code
         '''
-
         try:
             out = self / other
             assert not isinstance(out, Measurement)
@@ -188,7 +250,7 @@ class Measurement(object):
 
     def __rmul__(self, other):
         '''
-        absorbs multiplicant on the LHS into a measurement, assuming it is
+        absorbs multiplicant on the LHS into a measurement, even if it is
         dimensionless to begin with
         '''
         return Measurement(self.quantity * other, self.dimensions)
@@ -224,7 +286,7 @@ class Measurement(object):
     @property
     def label(self):
         '''
-        shorthand for matplotlib usage
+        returns a unicode label that ie: Matplotlib is able to handle
         '''
         return self.dimensions.pretty.decode('utf-8')
 
@@ -253,6 +315,15 @@ def define(namespace):
 
 
 if __name__ == '__main__':
-    import pytest, doctest
-    doctest.testmod()
-    pytest.main(['tests.py'])
+    namespace = globals()
+    define(namespace)
+
+    import doctest
+    doctest.testmod(globs=namespace)
+
+    # keep 1:1 between readme and docs for the meantime
+    f = open('README.rst', 'r')
+    if 'MKS\n' == next(f):
+        f.close()
+        f = open('README.rst', 'w')
+        f.write("MKS\n===\n\n"+__doc__)
