@@ -1,5 +1,8 @@
 # encoding: utf-8
 from __future__ import division
+import sys
+python_version = sys.version_info[0]
+import os, traceback
 
 __all__ = [] # injected into namespaces by definition method call
 __doc__ = '''An experiment in Python: units that get out of the way
@@ -66,12 +69,16 @@ CONSTANTS = {
 
 reg =  '0123456789-'
 sup = u'⁰¹²³⁴⁵⁶⁷⁸⁹⁻'
-SUP = {r: s.encode('utf-8') for r, s in zip(reg, sup)}
+if python_version==3:
+    SUP = {r: s for r, s in zip(reg, sup)}
+else:
+    SUP = {r: s.encode('utf-8') for r, s in zip(reg, sup)}
+
 
 def superscript(integer):
     '''
-    >>> superscript(-10)
-    '\\xe2\\x81\\xbb\\xc2\\xb9\\xe2\\x81\\xb0'
+    >>> print( superscript(-10) )
+    ⁻¹⁰
     '''
     return ''.join([SUP[c] for c in str(integer)])
 
@@ -103,7 +110,7 @@ class Dimensions(dict):
 
     def __add__(self, other):
         '''
-        >>> print Dimensions('M/N') + Dimensions('MT')
+        >>> print( Dimensions('M/N') + Dimensions('MT') )
         MMT/N
         '''
         combination = Dimensions()
@@ -156,6 +163,7 @@ class Dimensions(dict):
             return DERIVED[str(self)]
         positive, negative = [], []
         for k in sorted(self, key=self.get):
+        # there's a bug involving lexicographic ordering
             sym = BASE[k]
             exp = self[k]
             if self[k] > 0:
@@ -177,7 +185,7 @@ class Measurement(object):
     9 m²
     >>> print( 2 * length )
     6 m
-    >>> print( 6 * m * s**-1 )
+    >>> print( 6 / s * m )
     6 m.s⁻¹
     >>> 3*m - 2*m == 1*m
     True
@@ -205,11 +213,17 @@ class Measurement(object):
     '''
     __array_priority__ = True
 
-    def __new__(cls, qty, dims):
-        if str(dims)=='1':
-            return qty
-        inst = object.__new__(cls, qty, dims)
-        return inst
+    def __new__(cls, quantity, dimensions):
+        ''' 
+        if dimensionless, just return inner quantity object
+        else, return tuple
+        '''
+        if str(dimensions)=='1':
+            return quantity
+
+        instance = object.__new__(cls)
+        instance.__init__(quantity, dimensions)
+        return instance
 
     def __init__(self, quantity, dimensions=''):
         if isinstance(quantity, type(self)):
@@ -224,21 +238,28 @@ class Measurement(object):
         ensure that the dimensions match whatever is proposed, and return
         the scalar value. both the proper way to "exit" the unit process
         and a way to just test units at any point in code
+
+        >>> (1 * m)(mm)
+        1000.0
         '''
-        try:
-            out = self / other
-            assert not isinstance(out, Measurement)
+        out = self / other
+        if hasattr(out, 'units'): # unit tuple shell was not discarded
+            lunits = self.dimensions.pretty
+            runits = other.dimensions.pretty if hasattr(other, 'units') else 1
+            print( "Traceback (most recent call last):")
+            for filepath, line_no, namespace, line in traceback.extract_stack():
+                if os.path.basename(filepath)=='MKS.py': break
+                print(  '  File "{filepath}", line {line_no}, in {namespace}\n'
+                        '    {line}'.format(**locals()))
+            print( 'ValueError: operands could not be broadcast together with units <{lunits}> <{runits}>'.format(**locals()) )
+            exit()
+        else:
             return out
-        except AssertionError:
-            try:
-                raise UnitError(self.dimensions, other.dimensions)
-            except AttributeError:
-                raise UnitError(self.dimensions, '1')
 
     __len__ = lambda x: len(x.quantity)
     __abs__ = lambda x: Measurement(abs(x.quantity), x.dimensions)
     __neg__ = lambda x: x * -1
-    __add__ = lambda x, o: ( x(o.units) + o(o.units) ) * o.units
+    __add__ = lambda x, o: ( x(o.units) + o(o.units) ) * o.units if hasattr(o, 'units') else x(o)
     __sub__ = lambda x, o: x + -o
     __eq__  = lambda x, o: x(o.units) == o(o.units)
     __lt__  = lambda x, o: x(o.units) <  o(o.units)
@@ -246,6 +267,7 @@ class Measurement(object):
     __gt__  = lambda x, o: x(o.units) >  o(o.units)
     __ge__  = lambda x, o: x(o.units) >= o(o.units)
     __rdiv__= lambda x, o: o * x**-1
+    __rtruediv__= lambda x, o: o * x**-1
     __iter__= lambda x: (v * x.units for v in x.quantity)
 
     def __rmul__(self, other):
@@ -299,13 +321,20 @@ class Measurement(object):
             return lambda *a,**kw: getattr(self.quantity, thing)(*a,**kw) * self.units
         return getattr(super(Measurement, self), thing)
 
+    def __hash__(self):
+        '''
+        Required if we are ever to use Measurement objects as keys.
+        This is a poor implementation, and works badly.
+        '''
+        return 0
+
 
 def define(namespace):
     '''
     defines symbols in a given namespace
     '''
     variables = {}
-    for dimensions, symbol in BASE.items()+DERIVED.items():
+    for dimensions, symbol in list(BASE.items())+list(DERIVED.items()):
         if symbol in namespace:
             raise NameError('A variable {} already exists'.format(symbol))
         variables[symbol] = Measurement(1, dimensions)
