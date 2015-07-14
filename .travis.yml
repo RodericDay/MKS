@@ -1,8 +1,14 @@
 language: python
-
 python:
-    - "3.4"
-
+- '3.4'
 script:
-    - python MKS.py
-
+- python MKS.py
+deploy:
+  provider: pypi
+  user: Roderic
+  password:
+    secure: EpkMNoI9wi2zICb/PVNxk9he6a4Jz+TQR1FCax5ohlXie2Pdn+dZwhbpoj25pCeZDIGHaO6k2mHJbMVTdI9qlLJpxUPN7vqy/QyFsf8I95cNPAnfcn7xHzkjNoVplqqs2N6c6XrsjGB8CZ3kEpkAifuJz9cqEqjjonYU8DMB0qE=
+  on:
+    tags: true
+    branch: master
+sudo: false
